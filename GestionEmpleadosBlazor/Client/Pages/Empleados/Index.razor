@@ -1,0 +1,129 @@
+﻿@page "/empleados"
+@using GestionEmpleadosBlazor.Shared.Models;
+@inject HttpClient _http
+@inject NavigationManager Navigation
+@inject IJSRuntime JsRuntime
+<PageTitle>Empleados</PageTitle>
+<div class="row">
+    <div class="col-md-12">
+        <h2 class="text-center">Empleados</h2>
+        @if (empleadoData == null && empleadoData.Empleados == null && empleadoData.Empleados.Count < 0)
+        {
+            <p><em>Cargando...</em></p>
+        }
+        else
+        {
+            <div class="float-md-start">
+                <input type="text" class="form-control"
+                @bind="stringBusqueda" @bind:event="oninput" @onkeyup="async ()=>await FiltroBusqueda()"
+                       placeholder="Nombre del empleado">
+            </div>
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Empresa</th>
+                        <th>Correo asignado</th>
+                        <th>Celular asignado</th>
+                        <th>Telefono fijo asignado</th>
+                        <th>Extension</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var empleado in empleadoData.Empleados ?? new List<Empleado>())
+                    {
+                        <tr>
+                            <td>@empleado.NombreEmp</td>
+                            <td>@empleado.EmpresaEmp</td>
+                            <td>@empleado.CorreoAsigEmp</td>
+                            <td>@empleado.CelAsigEmp</td>
+                            <td>@empleado.TelFijoAsigEmp</td>
+                            <td>@empleado.ExtAsigEmp</td>
+                            <td>
+                                <button class="btn btn-primary"
+                                @onclick="(() => Edit(empleado.Id))">
+                                    Editar
+                                </button>
+                                <button class="btn btn-danger"
+                                @onclick="(() => Delete(empleado))">
+                                    Eliminar
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <nav aria-label="Page navigation example">
+                <ul class="pagination justify-content-center">
+                    @if (empleadoData.PageNumber > 1)
+                    {
+                        <li class="page-item">
+                            <a @onclick="async ()=> await GetEmpleados(empleadoData.PageNumber-1)" class="page-link" style="cursor:pointer" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                    }
+                    @for (int i = 1; i <= empleadoData.TotalPages; i++)
+                    {
+
+                        string activeClass = (i == empleadoData.PageNumber) ? "active" : "";
+                        int c = i;
+                        <li class="page-item @activeClass"><a @onclick="async ()=> await GetEmpleados(c)" style="cursor:pointer" class="page-link">@c</a></li>
+                    }
+                    @if (empleadoData.PageNumber < empleadoData.TotalPages)
+                    {
+                        <li class="page-item">
+                            <a @onclick="async ()=> await GetEmpleados(empleadoData.PageNumber+1)" class="page-link" style="cursor:pointer" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </nav>
+        }
+        <button class="btn btn-success" @onclick="Añadir">Añadir nuevo empleado</button>
+    </div>
+</div>
+
+@code {
+    private EmpleadoList empleadoData = new();
+    private string stringBusqueda = String.Empty;
+
+    private async Task Delete(Empleado empleado)
+    {
+        bool confirmation = await JsRuntime.InvokeAsync<bool>("confirm", "¿Está seguro de eliminar el empleado seleccionado?");
+
+        if (confirmation)
+        {
+            var result = await _http.DeleteFromJsonAsync<Status>($"api/empleado/delete/{empleado.Id}");
+            if (result.StatusCode == 1)
+                await GetEmpleados();
+        }
+    }
+    private void Edit(int id)
+    {
+        Navigation.NavigateTo($"/empleados/edit/{id}");
+    }
+
+    private void Añadir ()
+    {
+        Navigation.NavigateTo("/empleados/add");
+    }
+
+    private async Task FiltroBusqueda()
+    {
+        empleadoData.stringSearch = stringBusqueda;
+        await GetEmpleados();
+    }
+
+    private async Task GetEmpleados(int pageNo = 1)
+    {
+        empleadoData = await _http.GetFromJsonAsync<EmpleadoList>($"api/empleado/getall?sBusqueda={stringBusqueda}&pageNo={pageNo}");
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetEmpleados();
+    }
+}

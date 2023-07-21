@@ -1,0 +1,79 @@
+﻿@page "/empleados/add"
+@page "/empleados/edit/{id:int}"
+@using GestionEmpleadosBlazor.Shared.Models
+@inject HttpClient _http
+@inject IJSRuntime JsRuntime
+@inject NavigationManager Navigation
+<PageTitle>@Title</PageTitle>
+
+<div class="row px-5">
+    <div class="col-12">
+        <h3 class ="text-center mt-3">@Title</h3>
+        <EditForm Model="@_empleado" OnValidSubmit="Guardar">
+            <DataAnnotationsValidator />
+            <div class="form-group">
+                <label>Nombre: </label>
+                <InputText class="form-control" @bind-Value="@_empleado.NombreEmp" />
+                <ValidationMessage For="@(() => _empleado.NombreEmp)" />
+            </div>
+            <div class="form-group">
+                <label>Empresa</label>
+                <InputText class="form-control" @bind-Value="@_empleado.EmpresaEmp" />
+                <ValidationMessage For="@(() => _empleado.EmpresaEmp)" />
+            </div>
+            <div class="form-group">
+                <label>Correo ssignado: </label>
+                <InputText class="form-control" @bind-Value="@_empleado.CorreoAsigEmp" />
+                <ValidationMessage For="@(() => _empleado.CorreoAsigEmp)" />
+            </div>
+            <div class="form-group">
+                <label>Celular asignado: </label>
+                <InputText class="form-control" @bind-Value="@_empleado.CelAsigEmp" />
+                <ValidationMessage For="@(() => _empleado.CelAsigEmp)" />
+            </div>
+            <div class="form-group">
+                <label>Telefono fijo asignado: </label>
+                <InputText class="form-control" @bind-Value="@_empleado.TelFijoAsigEmp" />
+                <ValidationMessage For="@(() => _empleado.TelFijoAsigEmp)" />
+            </div>
+            <div class="form-group">
+                <label>Extension asignada: </label>
+                <InputNumber class="form-control" @bind-Value="@_empleado.ExtAsigEmp" />
+                <ValidationMessage For="@(() => _empleado.ExtAsigEmp)" />
+            </div>
+            <div class="form-group">
+                <input type="submit" class="btn btn-success" value="Guardar empleado" />
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set;}
+
+    private string Title = "Añadir empleado";
+    Empleado _empleado = new();
+    Status? _status = new();
+
+    private async Task Guardar()
+    {
+        var response = await _http.PostAsJsonAsync("api/empleado/addupdate", _empleado);
+        _status = await response.Content.ReadFromJsonAsync<Status>();
+
+        if(_status.StatusCode == 1)
+        {
+            await JsRuntime.InvokeVoidAsync("alert", _status.Message);
+            Navigation.NavigateTo("/empleados");        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id > 0)
+        {
+            Title = "Editar empleado";
+            _empleado = await _http.GetFromJsonAsync<Empleado>($"api/empleado/getbyid/{Id}");
+        }
+    }
+
+}
